@@ -38,3 +38,13 @@ C:\Users\Daniel\Dropbox\Projects\ProjectDungeons\ProjectDungeons\bin\Debug\Proje
 C:\Users\Daniel\Dropbox\Projects\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.Form1.resources
 C:\Users\Daniel\Dropbox\Projects\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.Resources.resources
 C:\Users\Daniel\Dropbox\Projects\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.vbproj.GenerateResource.Cache
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\bin\Debug\ProjectDungeons.exe
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\bin\Debug\ProjectDungeons.pdb
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\bin\Debug\ProjectDungeons.xml
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.vbprojResolveAssemblyReference.cache
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.Form1.resources
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.Resources.resources
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.vbproj.GenerateResource.Cache
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.exe
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.xml
+C:\Users\Daniel\Documents\GitHub\ProjectDungeons\ProjectDungeons\ProjectDungeons\obj\x86\Debug\ProjectDungeons.pdb

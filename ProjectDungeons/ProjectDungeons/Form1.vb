@@ -25,15 +25,6 @@ Public Class Game
     'Fields in our game graphic manager etc'
     Dim graphics As GraphicsDeviceManager
     Dim spriteBatch As SpriteBatch
-    'Texture that we will render'
-    Private mTexture As Texture2D
-    'Set the coordinates to draw the sprite at'
-    Private spritePos As Vector2 = Vector2.Zero
-    'X and Y speed of the sprite'
-    Private XSpeed As Single = 80
-    Private YSpeed As Single = 120
-    'Vector2 used for the speed of the sprite'
-    Private spriteSpeed As New Vector2(XSpeed, YSpeed)
     Dim MainCharacter As New PlayerCharacter
     Dim EnemyBall As New Enemy
     Dim BrickTemplate As New Wall
@@ -241,7 +232,6 @@ Public Class Game
         For Each Brick As Wall In colWalls
             spriteBatch.Draw(Brick.Texture, New Rectangle(Brick.intPositionX, Brick.intPositionY, Brick.intTextureWidth, Brick.intTextureHeight), Color.White)
         Next
-
         spriteBatch.End()
         MyBase.Draw(gameTime)
     End Sub
@@ -302,13 +292,25 @@ Public Class Wall
         intPositionX = recCollision.Y + recCollision.Height - Texture.Height
     End Sub
 End Class
+Public Class AnimationFrame
+    Public recFrame As New Rectangle
+    Public intAnimationTime As Integer
+    Public intOffsetX As Integer 'the two offset integers are for effects that move with the character
+    Public intOffsetY As Integer
+    Public Sub New(ByVal Frame As Rectangle, Optional ByVal Time As Integer = 10, Optional ByVal OffsetX As Integer = 0, Optional ByVal OffsetY As Integer = 0)
+        recFrame = Frame
+        intAnimationTime = Time
+        intOffsetX = OffsetX
+        intOffsetY = OffsetY
+    End Sub
+End Class
 Public Class SpecialEffect
     Public spriteSheet As Texture2D
     Public strSpriteFile As String
-    Public colAnimation As New System.Collections.Generic.List(Of Rectangle)
+    Public colAnimationFrames As New System.Collections.Generic.List(Of AnimationFrame)
     Public intCurrentFrame As Integer = 0
     Public intFrames As Integer 'used for counting frames between animation, increments everytime the same frame is displayed
-    Public intFrameMax As Integer = 10 'the number of frames until the animation switches
+    'Public intFrameMax As Integer = 10 'the number of frames until the animation switches
     Public sngRotation As Single = 0 'the rotation of the sprite
     Public bolWallPierce As Boolean
     Public bolEnemyPierce As Boolean
@@ -318,8 +320,8 @@ Public Class SpecialEffect
     Public sefAllyCollision As SpecialEffect
     Public intPushBack As Integer 'pushback on collisions in pixels
     Public bolMovesWithCharacter As Boolean
-    Public intOffsetX As Integer 'the two offset integers are for effects that move with the character
-    Public intOffsetY As Integer
+    'Public intOffsetX As Integer 'the two offset integers are for effects that move with the character
+    'Public intOffsetY As Integer
     Public intSpeedX As Integer
     Public intSpeedY As Integer
     Public vecPosition As Vector2
@@ -333,6 +335,8 @@ Public Class SpecialEffect
     Public bolLockPosition As Boolean = False 'locks character in place when used
     Public bolLockDirection As Boolean = False 'locks the characters facing when used
     Public intLockDuration As Integer = 0 'locks character for a specified number of screens
+    
+
     Public Sub update(ByRef character As character, Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing, Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
         Dim intX As Integer
         Dim intY As Integer
@@ -342,8 +346,8 @@ Public Class SpecialEffect
             intX = Convert.ToInt32(vecPosition.X) + intSpeedX
             intY = Convert.ToInt32(vecPosition.Y) + intSpeedY
         Else
-            intX = Convert.ToInt32(character.vecPosition.X) + intSpeedX + intOffsetX
-            intY = Convert.ToInt32(character.vecPosition.Y) + intSpeedY + intOffsetY
+            intX = Convert.ToInt32(character.vecPosition.X) + intSpeedX + colAnimationFrames.Item(intCurrentFrame).intOffsetX
+            intY = Convert.ToInt32(character.vecPosition.Y) + intSpeedY + colAnimationFrames.Item(intCurrentFrame).intOffsetY
         End If
         If colWalls Is Nothing = False And bolWallPierce = False Then
             If detectWallCollisions(intX, intY, New Vector2(intX, 0), colWalls) Then
@@ -360,9 +364,9 @@ Public Class SpecialEffect
             SetPositionY(intY)
         End If
         intFrames += 1
-        If intFrames = intFrameMax Then
+        If intFrames = colAnimationFrames.Item(intCurrentFrame).intAnimationTime Then
             intFrames = 0
-            If intCurrentFrame = colAnimation.Count - 1 Then
+            If intCurrentFrame = colAnimationFrames.Count - 1 Then
                 If bolAnimationRepeat = False Then
                     bolDelete = True
                 Else
@@ -407,18 +411,17 @@ Public Class SpecialEffect
         vecPosition.Y = intYAddition
         vecCollision.Y = intYAddition
     End Sub
-    Public Sub SetOffsetX(ByVal OffsetX As Integer)
-        intOffsetX = OffsetX
+    Public Sub AddAnimationFrame(ByVal Frame As Rectangle, Optional ByVal Time As Integer = 10, Optional ByVal OffsetX As Integer = 0, Optional ByVal OffsetY As Integer = 0)
+        colAnimationFrames.Add(New AnimationFrame(Frame, Time, OffsetX, OffsetY))
     End Sub
-    Public Sub SetOffsetY(ByVal Offsety As Integer)
-        intOffsetY = Offsety
-    End Sub
+
     Public Sub SetPositionY(ByVal sngYAddition As Single)
         vecPosition.Y = sngYAddition
         vecCollision.Y = sngYAddition
     End Sub
     Public Sub Draw(ByRef SpriteBatch As SpriteBatch)
-        SpriteBatch.Draw(spriteSheet, vecPosition, colAnimation(intCurrentFrame), Color.White, sngRotation, New Vector2(Convert.ToSingle(colAnimation(intCurrentFrame).Width / 2), Convert.ToSingle(colAnimation(intCurrentFrame).Height / 2)), 1.0F, SpriteEffects.None, 0)
+        Dim vecOrigin As Vector2 = New Vector2(Convert.ToSingle(colAnimationFrames(intCurrentFrame).recFrame.Width), Convert.ToSingle(colAnimationFrames(intCurrentFrame).recFrame.Height))
+        SpriteBatch.Draw(spriteSheet, vecPosition, colAnimationFrames(intCurrentFrame).recFrame, Color.White, sngRotation, vecOrigin, 1.0, SpriteEffects.None, 0)
     End Sub
 End Class
 Public Class character
@@ -447,7 +450,8 @@ Public Class character
     Public bolWalkDown As Boolean = False
     Public strFacing As String 'which way your character is facing
     Public recCollision As Rectangle
-    Public bolAttack As Boolean = False
+    Public intKnockBackX As Integer = 0 'when character is hit these x and y values get added and start decrementing to zero with successive screens.
+    Public intKnockBackY As Integer = 0
     Public colSpecialEffects As New System.Collections.Generic.Dictionary(Of String, SpecialEffect)
     Public ColTextures As New System.Collections.Generic.Dictionary(Of String, Texture2D)
     Public Function DiceRoll(ByVal intDiceNum As Integer, ByVal intDiceSize As Integer) As Integer
@@ -547,7 +551,22 @@ Public Class character
         vecPosition.Y = intpositionY
         recCollision.Y = intpositionY
     End Sub
-    Public Sub UpdateObjects(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing)
+    Public Sub Update(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing)
+        Call UpdateCharacter(colWalls)
+    End Sub
+    Public Sub UpdateCharacter(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing) 'all update functions inherited from Character class should call this
+        If intKnockBackX > 0 Then
+            intKnockBackX = Convert.ToInt32(intKnockBackX / 4) - 1
+            If intKnockBackX < 0 Then
+                intKnockBackX = 0
+            End If
+        End If
+        If intKnockBackY > 0 Then
+            intKnockBackY = Convert.ToInt32(intKnockBackY / 4) - 1
+            If intKnockBackY < 0 Then
+                intKnockBackY = 0
+            End If
+        End If
         For Each Sef As SpecialEffect In colSpecialEffects.Values
             Sef.update(Me, colWalls)
         Next
@@ -613,30 +632,34 @@ Public Class PlayerCharacter
             If colSpecialEffects.ContainsKey("attack") = False Then
                 Dim AttackObj As New SpecialEffect
                 AttackObj.bolMovesWithCharacter = True
-                AttackObj.SetPositionX(vecPosition.X)
-                AttackObj.SetPositionY(vecPosition.Y + 120)
-                AttackObj.SetOffsetX(0)
-                AttackObj.SetOffsetY(10)
+                'AttackObj.AddAnimationFrame(New Rectangle(0, 0, 13, 13), 3, -10, -8)
+                'AttackObj.AddAnimationFrame(New Rectangle(14, 0, 16, 13), 3, -18, -2)
+                'AttackObj.AddAnimationFrame(New Rectangle(32, 0, 18, 13), 3, -21, 6)
+                'AttackObj.AddAnimationFrame(New Rectangle(51, 0, 17, 13), 3, -17, 22)
+                'AttackObj.AddAnimationFrame(New Rectangle(69, 0, 13, 13), 3, -10, 30)
+                AttackObj.AddAnimationFrame(New Rectangle(0, 0, 13, 13), 3, 7, 2)
+                AttackObj.AddAnimationFrame(New Rectangle(14, 0, 16, 13), 3, -1, 8)
+                AttackObj.AddAnimationFrame(New Rectangle(32, 0, 18, 13), 3, -4, 16)
+                AttackObj.AddAnimationFrame(New Rectangle(51, 0, 17, 13), 3, -1, 32)
+                AttackObj.AddAnimationFrame(New Rectangle(69, 0, 13, 13), 3, 7, 40)
                 AttackObj.spriteSheet = ColTextures.Item("attack")
                 AttackObj.intSpeedX = 0
                 AttackObj.intSpeedY = 0
-                AttackObj.colAnimation.Add(New Rectangle(45, 0, 45, 49))
-                AttackObj.colAnimation.Add(New Rectangle(45, 49, 45, 49))
-                AttackObj.colAnimation.Add(New Rectangle(45, 96, 45, 49))
-                AttackObj.colAnimation.Add(New Rectangle(45, 145, 45, 49))
-                AttackObj.colAnimation.Add(New Rectangle(45, 194, 45, 49))
                 AttackObj.bolWallPierce = True
                 AttackObj.bolAllyPierce = True
                 AttackObj.bolEnemyPierce = True
                 AttackObj.strKey = "attack"
-                AttackObj.intFrameMax = 3
                 AttackObj.bolLockPosition = True
                 AttackObj.bolLockDirection = True
                 colSpecialEffects.Add("attack", AttackObj)
             End If
         End If
     End Sub
-    Public Sub update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+    Public Overloads Sub update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+        UpdateCharacter(colWalls)
+        updatePlayerCharacter(colWalls)
+    End Sub
+    Public Overloads Sub updatePlayerCharacter(ByRef colWalls As System.Collections.Generic.List(Of Wall))
         Dim testvector As Vector2
         Dim bolLockPosition As Boolean = False
         CheckButtons()
@@ -655,7 +678,6 @@ Public Class PlayerCharacter
             End If
         End If
         ObjectCleanup()
-        UpdateObjects(colWalls)
     End Sub
 
 End Class
@@ -663,7 +685,11 @@ Public Class Enemy
     Inherits character
     Public intAIDelay As Integer = 0
     Public strDirection As String = "none"
-    Public Sub Update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+    Public Overloads Sub Update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+        UpdateCharacter(colWalls)
+        UpdateEnemy(colWalls)
+    End Sub
+    Public Sub UpdateEnemy(ByRef colWalls As System.Collections.Generic.List(Of Wall))
         Dim testvector As Vector2
         Dim intRoll As Integer
         intAIDelay += 1
@@ -749,6 +775,5 @@ Public Class Enemy
             SetPositionY(Convert.ToInt32(vecPosition.Y) + Convert.ToInt32(testvector.Y))
         End If
         ObjectCleanup()
-        UpdateObjects(colWalls)
     End Sub
 End Class
