@@ -203,9 +203,9 @@ Public Class Game
         If GamePad.GetState(PlayerIndex.One).Buttons.Back = ButtonState.Pressed Then
             Me.Exit()
         End If
-        MainCharacter.update(colWalls)
+        MainCharacter.Update(colWalls, colEnemies)
         For Each EnemyMob As Enemy In colEnemies
-            EnemyMob.Update(colWalls)
+            EnemyMob.Update(colWalls, colEnemies)
         Next
         'TODO: Add your update logic here'
 
@@ -318,7 +318,7 @@ Public Class SpecialEffect
     Public sefWallCollision As SpecialEffect
     Public sefEnemyCollision As SpecialEffect
     Public sefAllyCollision As SpecialEffect
-    Public intPushBack As Integer 'pushback on collisions in pixels
+    Public intKnockBack As Integer 'knockback on collisions in pixels
     Public bolMovesWithCharacter As Boolean
     'Public intOffsetX As Integer 'the two offset integers are for effects that move with the character
     'Public intOffsetY As Integer
@@ -336,7 +336,12 @@ Public Class SpecialEffect
     Public bolLockDirection As Boolean = False 'locks the characters facing when used
     Public intLockDuration As Integer = 0 'locks character for a specified number of screens
     
-
+    Public Function DetectPointCollision(ByVal recObject As Rectangle, ByVal vecPoint As Vector2) As Boolean
+        If vecPoint.X >= recObject.X And vecPoint.X <= recObject.X + recObject.Width And vecPoint.Y >= recObject.Y And vecPoint.Y >= recObject.Y + recObject.Height Then
+            Return True
+        End If
+        Return False
+    End Function
     Public Sub update(ByRef character As character, Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing, Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
         Dim intX As Integer
         Dim intY As Integer
@@ -376,20 +381,46 @@ Public Class SpecialEffect
             intCurrentFrame += 1
         End If
         If colEnemies Is Nothing = False Then
-            For Each Enemy As Enemy In colEnemies
-
-            Next
+            detectEnemyCollisions(New Rectangle(Convert.ToInt32(vecCollision.X), Convert.ToInt32(vecCollision.Y), intCollisionWidth, intCollisionHeight), colEnemies)
         End If
     End Sub
-    Public Function detectEnemyCollisions(ByVal intX As Integer, ByVal intY As Integer, ByVal vecDestination As Vector2, ByRef colEnemies As System.Collections.Generic.List(Of Enemy)) As Boolean
-        Dim RecTest As New Rectangle(Convert.ToInt32(vecCollision.X + vecDestination.X), Convert.ToInt32(vecCollision.Y + vecDestination.Y), intCollisionWidth, intCollisionHeight)
+    Public Sub detectEnemyCollisions(ByVal rectest As Rectangle, ByRef colEnemies As System.Collections.Generic.List(Of Enemy))
         For Each Enemy As Enemy In colEnemies
-            If Not (RecTest.Bottom <= Enemy.recCollision.Top Or RecTest.Top >= Enemy.recCollision.Bottom Or RecTest.Left >= Enemy.recCollision.Right Or RecTest.Right <= Enemy.recCollision.Left) Then
-                Return True
+            If DetectCollision(rectest, Enemy.recCollision) Then
+                EnemyCollision(Enemy)
             End If
         Next
+    End Sub
+    Public Function DetectCollision(ByRef rec1 As Rectangle, ByRef rec2 As Rectangle) As Boolean
+        If Not (rec1.Bottom <= rec2.Top Or rec1.Top >= rec2.Bottom Or rec1.Left >= rec2.Right Or rec1.Right <= rec2.Left) Then
+            Return True
+        End If
         Return False
     End Function
+    Public Sub EnemyCollision(ByRef i As Enemy)
+        Dim vecSef As New Vector2
+        Dim vecEnemy As New Vector2
+        Dim intDifferenceX As Integer
+        Dim intDifferenceY As Integer
+        Dim intHypontenuse As Integer
+        Dim intKnockBackX As Integer
+        Dim intKnockBackY As Integer
+        Dim intSizeFactor As Integer
+        If intKnockBack > 0 Then
+            vecSef.X = vecPosition.X + Convert.ToInt32(colAnimationFrames(intCurrentFrame).recFrame.Width / 2)
+            vecSef.Y = vecPosition.Y + Convert.ToInt32(colAnimationFrames(intCurrentFrame).recFrame.Height / 2)
+            vecEnemy.X = i.vecPosition.X + Convert.ToInt32(i.intWidth / 2)
+            vecEnemy.Y = i.vecPosition.Y + Convert.ToInt32(i.intHeight / 2)
+            intDifferenceX = Convert.ToInt32(vecSef.X - vecEnemy.X)
+            intDifferenceY = Convert.ToInt32(vecSef.Y - vecEnemy.Y)
+            intHypontenuse = Convert.ToInt32(Math.Sqrt(intDifferenceX * intDifferenceX + intDifferenceY * intDifferenceY))
+            intSizeFactor = Convert.ToInt32(intKnockBack / intHypontenuse)
+            intKnockBackX = intDifferenceX * intHypontenuse
+            intKnockBackY = intDifferenceY * intHypontenuse
+            i.intKnockBackX = intKnockBackX
+            i.intKnockBackY = intKnockBackY
+        End If
+    End Sub
     Public Function detectWallCollisions(ByVal intX As Integer, ByVal intY As Integer, ByVal vecDestination As Vector2, ByRef colWalls As System.Collections.Generic.List(Of Wall)) As Boolean
         Dim RecTest As New Rectangle(Convert.ToInt32(vecCollision.X + vecDestination.X), Convert.ToInt32(vecCollision.Y + vecDestination.Y), intCollisionWidth, intCollisionHeight)
         For Each wall As Wall In colWalls
@@ -402,14 +433,17 @@ Public Class SpecialEffect
     Public Sub SetPositionX(ByVal intXAddition As Integer)
         vecPosition.X = intXAddition
         vecCollision.X = intXAddition
+        intCollisionWidth = colAnimationFrames(intCurrentFrame).recFrame.Width
     End Sub
     Public Sub SetPositionX(ByVal sngXAddition As Single)
         vecPosition.X = sngXAddition
         vecCollision.X = sngXAddition
+        intCollisionWidth = colAnimationFrames(intCurrentFrame).recFrame.Width
     End Sub
     Public Sub SetPositionY(ByVal intYAddition As Integer)
         vecPosition.Y = intYAddition
         vecCollision.Y = intYAddition
+        intCollisionHeight = colAnimationFrames(intCurrentFrame).recFrame.Height
     End Sub
     Public Sub AddAnimationFrame(ByVal Frame As Rectangle, Optional ByVal Time As Integer = 10, Optional ByVal OffsetX As Integer = 0, Optional ByVal OffsetY As Integer = 0)
         colAnimationFrames.Add(New AnimationFrame(Frame, Time, OffsetX, OffsetY))
@@ -418,6 +452,7 @@ Public Class SpecialEffect
     Public Sub SetPositionY(ByVal sngYAddition As Single)
         vecPosition.Y = sngYAddition
         vecCollision.Y = sngYAddition
+        intCollisionHeight = colAnimationFrames(intCurrentFrame).recFrame.Height
     End Sub
     Public Sub Draw(ByRef SpriteBatch As SpriteBatch)
         Dim vecOrigin As Vector2 = New Vector2(Convert.ToSingle(colAnimationFrames(intCurrentFrame).recFrame.Width), Convert.ToSingle(colAnimationFrames(intCurrentFrame).recFrame.Height))
@@ -551,10 +586,10 @@ Public Class character
         vecPosition.Y = intpositionY
         recCollision.Y = intpositionY
     End Sub
-    Public Sub Update(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing)
-        Call UpdateCharacter(colWalls)
+    Public Sub Update(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing, Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
+        Call UpdateCharacter(colWalls, colEnemies)
     End Sub
-    Public Sub UpdateCharacter(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing) 'all update functions inherited from Character class should call this
+    Public Sub UpdateCharacter(Optional ByVal colWalls As System.Collections.Generic.List(Of Wall) = Nothing, Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing) 'all update functions inherited from Character class should call this
         If intKnockBackX > 0 Then
             intKnockBackX = Convert.ToInt32(intKnockBackX / 4) - 1
             If intKnockBackX < 0 Then
@@ -568,7 +603,7 @@ Public Class character
             End If
         End If
         For Each Sef As SpecialEffect In colSpecialEffects.Values
-            Sef.update(Me, colWalls)
+            Sef.update(Me, colWalls, colEnemies)
         Next
     End Sub
     Public Sub ObjectCleanup()
@@ -582,13 +617,19 @@ Public Class character
             colSpecialEffects.Remove(strKey)
         Next
     End Sub
-    Public Function detectCollisions(ByVal vecDestination As Vector2, ByRef colWalls As System.Collections.Generic.List(Of Wall)) As Boolean
+    Public Function detectWallCollisions(ByVal vecDestination As Vector2, ByRef colWalls As System.Collections.Generic.List(Of Wall)) As Boolean
         Dim RecTest As New Rectangle(Convert.ToInt32(recCollision.X + vecDestination.X), Convert.ToInt32(recCollision.Y + vecDestination.Y), recCollision.Width, recCollision.Height)
         For Each wall As Wall In colWalls
-            If Not (RecTest.Bottom <= wall.recCollision.Top Or RecTest.Top >= wall.recCollision.Bottom Or RecTest.Left >= wall.recCollision.Right Or RecTest.Right <= wall.recCollision.Left) Then
+            If DetectCollision(RecTest, wall.recCollision) Then
                 Return True
             End If
         Next
+        Return False
+    End Function
+    Public Function DetectCollision(ByRef rec1 As Rectangle, ByRef rec2 As Rectangle) As Boolean
+        If Not (rec1.Bottom <= rec2.Top Or rec1.Top >= rec2.Bottom Or rec1.Left >= rec2.Right Or rec1.Right <= rec2.Left) Then
+            Return True
+        End If
         Return False
     End Function
     Public Sub Draw(ByRef SpriteBatch As SpriteBatch)
@@ -655,11 +696,11 @@ Public Class PlayerCharacter
             End If
         End If
     End Sub
-    Public Overloads Sub update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
-        UpdateCharacter(colWalls)
-        updatePlayerCharacter(colWalls)
+    Public Overloads Sub update(ByRef colWalls As System.Collections.Generic.List(Of Wall), Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
+        UpdateCharacter(colWalls, colEnemies)
+        updatePlayerCharacter(colWalls, colEnemies)
     End Sub
-    Public Overloads Sub updatePlayerCharacter(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+    Public Overloads Sub updatePlayerCharacter(ByRef colWalls As System.Collections.Generic.List(Of Wall), Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
         Dim testvector As Vector2
         Dim bolLockPosition As Boolean = False
         CheckButtons()
@@ -670,10 +711,10 @@ Public Class PlayerCharacter
             End If
         Next
         If bolLockPosition = False Then
-            If detectCollisions(New Vector2(testvector.X, 0), colWalls) = False Then
+            If detectWallCollisions(New Vector2(testvector.X, 0), colWalls) = False Then
                 SetPositionX(Convert.ToInt32(vecPosition.X) + Convert.ToInt32(testvector.X))
             End If
-            If detectCollisions(New Vector2(0, testvector.Y), colWalls) = False Then
+            If detectWallCollisions(New Vector2(0, testvector.Y), colWalls) = False Then
                 SetPositionY(Convert.ToInt32(vecPosition.Y) + Convert.ToInt32(testvector.Y))
             End If
         End If
@@ -685,11 +726,11 @@ Public Class Enemy
     Inherits character
     Public intAIDelay As Integer = 0
     Public strDirection As String = "none"
-    Public Overloads Sub Update(ByRef colWalls As System.Collections.Generic.List(Of Wall))
-        UpdateCharacter(colWalls)
-        UpdateEnemy(colWalls)
+    Public Overloads Sub Update(ByRef colWalls As System.Collections.Generic.List(Of Wall), Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
+        UpdateCharacter(colWalls, colEnemies)
+        'UpdateEnemy(colWalls)
     End Sub
-    Public Sub UpdateEnemy(ByRef colWalls As System.Collections.Generic.List(Of Wall))
+    Public Sub UpdateEnemy(ByRef colWalls As System.Collections.Generic.List(Of Wall), Optional ByVal colEnemies As System.Collections.Generic.List(Of Enemy) = Nothing)
         Dim testvector As Vector2
         Dim intRoll As Integer
         intAIDelay += 1
@@ -768,10 +809,10 @@ Public Class Enemy
                 bolWalkUp = False
         End Select
         testvector = Walk()
-        If detectCollisions(New Vector2(testvector.X, 0), colWalls) = False Then
+        If detectWallCollisions(New Vector2(testvector.X, 0), colWalls) = False Then
             SetPositionX(Convert.ToInt32(vecPosition.X) + Convert.ToInt32(testvector.X))
         End If
-        If detectCollisions(New Vector2(0, testvector.Y), colWalls) = False Then
+        If detectwallCollisions(New Vector2(0, testvector.Y), colWalls) = False Then
             SetPositionY(Convert.ToInt32(vecPosition.Y) + Convert.ToInt32(testvector.Y))
         End If
         ObjectCleanup()
